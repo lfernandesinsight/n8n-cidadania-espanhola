@@ -12,7 +12,7 @@ estrela), e disponibiliza para visualização no Metabase.
 ## Setup inicial
 
 ```bash
-git clone <seu-repo>
+git clone https://github.com/lfernandesinsight/n8n-cidadania-espanhola.git
 cd n8n-cidadania-espanhola
 cp .env.example .env
 # edite o .env e troque a senha do Postgres
@@ -28,7 +28,7 @@ docker compose up -d
 Serviços disponíveis em:
 - n8n: http://localhost:5678
 - Metabase: http://localhost:3000
-- Postgres: localhost:5432 (user: `cidadania`, senha: `cidadania123`, db: `cidadania_dw`)
+- Postgres: localhost:5432 (user: `cidadania`, db: `cidadania_dw`)
 
 O schema (modelo estrela) é criado automaticamente na primeira subida do
 Postgres, a partir do arquivo `ddl/001_star_schema.sql`.
@@ -39,18 +39,37 @@ Postgres, a partir do arquivo `ddl/001_star_schema.sql`.
 - `fato_processo` — grão: um registro por processo/expediente
 
 **Dimensões:**
-- `dim_consulado` — consulado de origem e de processamento
+- `dim_consulado` — consulado
 - `dim_anexo` — categoria do anexo (1 a 5)
 - `dim_situacao` — status/situação do processo
 - `dim_tempo` — datas de entrada/atualização, para agregação por mês/ano
 
-## Próximos passos
+## Sprints
 
-1. Configurar credencial do Google Sheets no n8n (OAuth)
-2. Montar o workflow de ETL:
-   - Schedule Trigger
-   - Google Sheets (leitura)
-   - Code node (limpeza: trim, normalização, parse de datas)
-   - Code node (mapeamento para dimensões, com lookup/dedup)
-   - Postgres node (upsert nas dimensões, depois na fato)
-3. Conectar o Metabase ao Postgres (`cidadania_dw`) e montar os relatórios
+### Sprint 1 — Setup do ambiente ✅
+- Docker Compose com n8n + Postgres + Metabase
+- DDL do modelo estrela (`ddl/001_star_schema.sql`)
+- Repositório Git criado e versionado (`.gitignore`, `.env.example`)
+
+### Sprint 2 — Conexões e fonte de dados ✅
+- Metabase conectado ao Postgres, reconhecendo as 5 tabelas do modelo estrela
+- Credencial OAuth2 do Google Sheets configurada no n8n (projeto no Google Cloud Console, consent screen, test user)
+- Node "Get row(s) in sheet" lendo a aba "Citas Marcadas" (3187 linhas brutas)
+
+### Sprint 3 — Limpeza dos dados ✅
+- Mapeamento completo das colunas da planilha (nome, protocolo, datas, consulado, anexo, situação, espera, notas)
+- Code node de limpeza: remove linha de instrução, descarta linhas vazias/lixo, normaliza texto (`empty` → `null`, trim), converte datas para ISO (`yyyy-mm-dd`)
+- Resultado: 3187 → 2919 itens válidos
+
+### Sprint 4 — Carga no Data Warehouse (em andamento)
+- Nodes Postgres de upsert nas dimensões (`dim_consulado`, `dim_anexo`, `dim_situacao`)
+- Node Postgres de insert/upsert em `fato_processo`, resolvendo FKs via lookup nas dimensões
+- Popular `dim_tempo` a partir das datas presentes nos dados
+
+### Sprint 5 — Relatórios no Metabase (a fazer)
+- Construir dashboards: total de processos, por consulado, por situação, tempo médio de espera
+- Explorar tendências por mês/ano usando `dim_tempo`
+
+### Sprint 6 — Agendamento e automação (a fazer)
+- Trocar execução manual por Schedule Trigger no n8n
+- Validar comportamento de upsert em execuções repetidas (idempotência)

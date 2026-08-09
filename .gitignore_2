@@ -1,0 +1,18 @@
+# Ambiente
+.env
+
+# Docker
+*.log
+
+# SO
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/*
+!.vscode/settings.json
+
+# n8n / dados locais (caso rodem fora de volume Docker)
+n8n_data/
+postgres_data/
+metabase_data/
